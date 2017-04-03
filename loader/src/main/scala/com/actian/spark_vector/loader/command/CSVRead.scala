@@ -15,9 +15,9 @@
  */
 package com.actian.spark_vector.loader.command
 
-import org.apache.spark.Logging
 import org.apache.spark.sql.SQLContext
 
+import com.actian.spark_vector.util.Logging
 import com.actian.spark_vector.loader.options.UserOptions
 import com.actian.spark_vector.sql.sparkQuote
 
@@ -25,7 +25,7 @@ object CSVRead extends Logging {
   private def parseOptions(options: UserOptions): String = {
     Seq(
       options.csv.parserLib.map(lib => s"""parserLib "${lib}""""),
-      Some("comment '\0'"),
+      Some("comment '\u0000'"),
       options.csv.headerRow.filter(identity).map(_ => """header "true" """),
       Some(s"""delimiter "${options.csv.separatorChar.getOrElse("|")}""""),
       options.csv.quoteChar.map(c => if (c != '\'') s"quote '$c'" else s"""quote "$c""""),

@@ -21,13 +21,13 @@ import java.nio.{ ByteOrder, ByteBuffer }
 
 import scala.reflect.{ classTag, ClassTag }
 
-import org.apache.spark.Logging
 import org.apache.spark.sql.types.Decimal
 import org.apache.spark.unsafe.types.UTF8String
-import org.apache.spark.sql.catalyst.expressions.SpecificMutableRow
+import org.apache.spark.sql.catalyst.expressions.SpecificInternalRow
 import org.apache.spark.sql.catalyst.InternalRow
 
 import com.actian.spark_vector.Profiling
+import com.actian.spark_vector.util.Logging
 import com.actian.spark_vector.vector.ColumnMetadata
 import com.actian.spark_vector.colbuffer.{ ByteSize, ColumnBufferBuildParams, ColumnBuffer, ReadColumnBuffer }
 import com.actian.spark_vector.datastream.{ padding, DataStreamConnectionHeader, DataStreamConnector }
@@ -38,7 +38,7 @@ class RowReader(tableColumnMetadata: Seq[ColumnMetadata], headerInfo: DataStream
 
   implicit val accs = profileInit("reading from datastream", "columns buffering")
 
-  private val row = new SpecificMutableRow(tableColumnMetadata.map(_.dataType))
+  private val row = new SpecificInternalRow(tableColumnMetadata.map(_.dataType))
   private val numColumns = tableColumnMetadata.size
   private var numTuples = 0
 

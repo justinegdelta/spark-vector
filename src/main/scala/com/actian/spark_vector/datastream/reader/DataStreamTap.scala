@@ -15,13 +15,12 @@
  */
 package com.actian.spark_vector.datastream.reader
 
-import org.apache.spark.Logging
-
-import com.actian.spark_vector.util.ResourceUtil.closeResourceOnFailure
-import com.actian.spark_vector.colbuffer.ColumnBuffer
-
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
+
+import com.actian.spark_vector.util.Logging
+import com.actian.spark_vector.util.ResourceUtil.closeResourceOnFailure
+import com.actian.spark_vector.colbuffer.ColumnBuffer
 
 /** The `VectorTap` that reads `Vector` vectors from a `Vector DataStream`'s socket as `ByteBuffer`s */
 private[reader] case class DataStreamTap(implicit val socket: SocketChannel) extends Logging with Serializable {
