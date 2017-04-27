@@ -28,11 +28,11 @@ import org.apache.spark.sql.types._
  */
 trait VectorFixture {
   def connectionProps: VectorConnectionProperties = {
-    val host = System.getProperty("vector.host", "")
-    val instance = System.getProperty("vector.instance", "")
-    val database = System.getProperty("vector.database", "")
-    val user = System.getProperty("vector.user", "")
-    val password = System.getProperty("vector.password", "")
+    val host = System.getProperty("vector.host", "devcluster-head.datarush.local")
+    val instance = System.getProperty("vector.instance", "VW")
+    val database = System.getProperty("vector.database", "testdb")
+    val user = System.getProperty("vector.user", "actian")
+    val password = System.getProperty("vector.password", "actian")
 
     VectorConnectionProperties(host, instance, database, Some(user).filter(!_.isEmpty), Some(password).filter(!_.isEmpty))
   }

@@ -80,7 +80,7 @@ class RowReader(tableColumnMetadata: Seq[ColumnMetadata], headerInfo: DataStream
    * A list of calls (one per column buffer) to set typed values in the corresponding row's column position, and performing the necessary type casts
    * while reading the needed value from its `ReadColumnBuffer[_]`.
    *
-   * @note Since read column buffers are exposed only through the `ReadColumnBuffer[_]` interface and we need to set the `SpecificMutableRow` with appropriate
+   * @note Since read column buffers are exposed only through the `ReadColumnBuffer[_]` interface and we need to set the `SpecificInternalRow` with appropriate
    * typed values, we make use of runtime reflection to determine the type of the generic parameter of the `ReadColumnBuffer[_]`
    */
   private def setValFromColumnBuffer(col: Int) = columnBufs(col).valueType match {

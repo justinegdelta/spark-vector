@@ -79,7 +79,7 @@ trait VectorOps {
     /**
      * Unload a target Vector table using this SparkContext.
      *
-     * @param vectorPros connection properties to the Vector instance
+     * @param vectorProps connection properties to the Vector instance
      * @param table name of the table to unload
      * @param tableColumnMetadata sequence of `ColumnMetadata` obtained for `table`
      * @param selectColumns string of select columns separated by comma

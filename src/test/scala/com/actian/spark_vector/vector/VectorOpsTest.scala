@@ -251,7 +251,7 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
   }
 
   test("generate table/gen", RandomizedTest) { fixture =>
-    forAll(DataGens.dataGen, minSuccessful(20))(typedData => {
+    forAll(DataGens.dataGen, minSuccessful(100))(typedData => {
       val (dataType, data) = (typedData.dataType, typedData.data)
       assertTableGeneration(fixture, dataType, data, Map.empty)
     })
@@ -260,7 +260,7 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
   test("generate table/constant column") { fixture =>
     // FIXME: this is a hackish test to verify unload with a ct column (although this case is not often
     // for simple/basic queries, but more complex ones in ExternalScans) using two different user
-    // defined schemas, one for load and the other for unload; the latter has c1 defnied for the ct col
+    // defined schemas, one for load and the other for unload; the latter has c1 defined for the ct col
     val schema = StructTypeUtil.createSchema("i0" -> IntegerType)
     val data = Seq(Row(42), Row(43))
     val rdd = fixture.sc.parallelize(data)
@@ -305,6 +305,7 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
 
   test("generate table/filtered select on a subset of columns") { fixture =>
     val schema = StructTypeUtil.createSchema("i0" -> IntegerType, "i1" -> IntegerType, "i2" -> IntegerType)
+    val schemafiltered = StructTypeUtil.createSchema("i0" -> IntegerType, "i2" -> IntegerType)
     val data = Seq(Row(42, 43, 44), Row(43, 44, 45), Row(44, 45, 46))
     val rdd = fixture.sc.parallelize(data)
     withTable(func => Unit) { tableName =>
@@ -312,10 +313,10 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
       val expectedData = Seq(Seq[Any](44, 46))
       val sqlContext = new SQLContext(fixture.sc)
       val tableRef = TableRef(connectionProps, tableName)
-      val vectorRel = new VectorRelation(tableRef, Some(schema), sqlContext, Map.empty) {
-        override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] =
+      val vectorRel = new VectorRelation(tableRef, Some(schemafiltered), sqlContext, Map.empty) {
+        override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = 
           sqlContext.sparkContext.unloadVector(connectionProps, tableName, Seq(ColumnMetadata("i0", "integer4", false, 10, 0),
-            ColumnMetadata("i2", "integer4", false, 10, 0)), "i0, i2", "where i0 > ? and i1 > ?", Seq(43, 44))
+            ColumnMetadata("i2", "integer4", false, 10, 0)), "i0, i2", "where i0 > ? and i1 > ?", Seq(43, 44)) 
       }
       val dataframe = sqlContext.baseRelationToDataFrame(vectorRel)
       val resultsSpark = dataframe.collect.map(_.toSeq).toSeq
@@ -333,12 +334,12 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
       val tableRef = TableRef(connectionProps, tableName)
       val vectorRel = new VectorRelation(tableRef, Some(schema), sqlContext, Map.empty) {
         override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] =
-          // We use a "select count(*)" within Vector and create an RDD to shuffle count(*) empty rows.
+          // We use a "select count(*)" within Vector and create an empty RDD
           super.buildScan(Array.empty, Array.empty)
       }
       val dataframe = sqlContext.baseRelationToDataFrame(vectorRel)
-      val resultsSpark = dataframe.collect.toSeq // This returns count(*) empty rows
-      resultsSpark.length shouldBe data.length
+      val resultsSpark = dataframe.collect.toSeq // This returns empty rdd
+      resultsSpark.length shouldBe 0
     }
   }
 
@@ -381,10 +382,10 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
     val rdd = fixture.sc.parallelize(expectedData)
     withTable(func => Unit) { tableName =>
       rdd.loadVector(dataType, connectionProps, tableName, fieldMap = Some(fieldMapping), createTable = true)
-
+      
       var resultsJDBC = VectorJDBC.withJDBC(connectionProps)(_.query(s"select * from $tableName")).map(Row.fromSeq)
       compareResults(resultsJDBC, expectedData, mappedIndices)
-
+      
       val sqlContext = new SQLContext(fixture.sc)
       val vectorRel = VectorRelation(TableRef(connectionProps, tableName), Some(dataType), sqlContext, Map.empty[String, String])
       val dataframe = sqlContext.baseRelationToDataFrame(vectorRel)

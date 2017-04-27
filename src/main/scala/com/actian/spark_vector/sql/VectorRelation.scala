@@ -66,7 +66,7 @@ private[spark_vector] class VectorRelation(tableRef: TableRef,
           }
           val numRows = rs.getLong(1)
           logDebug(s"Create empty RDD from the count(*) of ${numRows} row(s).")
-          sqlContext.sparkContext.range(0L, numRows).map(_ => InternalRow.empty).asInstanceOf[RDD[Row]]
+          sqlContext.sparkContext.emptyRDD[Row]
         }
       }
     } else {
