@@ -19,12 +19,12 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{ DataFrame, Row, SQLContext, sources }
 import org.apache.spark.sql.sources.{ BaseRelation, Filter, InsertableRelation, PrunedFilteredScan, PrunedScan }
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.catalyst.InternalRow
 
 import com.actian.spark_vector.util.Logging
 import com.actian.spark_vector.datastream.VectorEndpointConf
 import com.actian.spark_vector.vector.{ ColumnMetadata, VectorJDBC, VectorOps }
 import com.actian.spark_vector.vector.PredicatePushdown
+import com.actian.spark_vector.vector.Vector
 
 private[spark_vector] class VectorRelation(tableRef: TableRef,
     userSpecifiedSchema: Option[StructType],
@@ -72,8 +72,8 @@ private[spark_vector] class VectorRelation(tableRef: TableRef,
     } else {
       val (selectColumns, selectTableMetadata) = (requiredColumns.mkString(","), pruneColumns(requiredColumns, tableMetadata))
       logInfo(s"Execute Vector prepared query: select ${selectColumns} from ${tableRef.table} ${whereClause}")
-      sqlContext.sparkContext.unloadVector(tableRef.toConnectionProps, tableRef.table, selectTableMetadata,
-        selectColumns, whereClause, whereParams)
+      Vector.unloadVector(sqlContext.sparkContext, tableRef.table, tableRef.toConnectionProps, selectTableMetadata,
+        selectColumns, whereClause, whereParams).asInstanceOf[RDD[Row]]
     }
   }
 }

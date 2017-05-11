@@ -251,7 +251,7 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
   }
 
   test("generate table/gen", RandomizedTest) { fixture =>
-    forAll(DataGens.dataGen, minSuccessful(100))(typedData => {
+    forAll(DataGens.dataGen, minSuccessful(20))(typedData => {
       val (dataType, data) = (typedData.dataType, typedData.data)
       assertTableGeneration(fixture, dataType, data, Map.empty)
     })
@@ -272,9 +272,10 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
       val tableRef = TableRef(connectionProps, tableName)
       // Create the buildScan with other schema and column metadata
       val vectorRel = new VectorRelation(tableRef, Some(schemaWithCtColumn), sqlContext, Map.empty) {
-        override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] =
-          sqlContext.sparkContext.unloadVector(connectionProps, tableName, Seq(ColumnMetadata("i0", "integer4", false, 10, 0),
-            ColumnMetadata("si0", "integer2", false, 5, 0)), "i0, 1")
+        override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
+          Vector.unloadVector(sqlContext.sparkContext, tableName, connectionProps, Seq(ColumnMetadata("i0", "integer4", false, 10, 0),
+            ColumnMetadata("si0", "integer2", false, 5, 0)),  "i0, 1").asInstanceOf[RDD[Row]]
+        }
       }
       val dataframe = sqlContext.baseRelationToDataFrame(vectorRel)
       val resultsSpark = dataframe.collect.map(_.toSeq).toSeq
@@ -292,10 +293,11 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
       val sqlContext = new SQLContext(fixture.sc)
       val tableRef = TableRef(connectionProps, tableName)
       val vectorRel = new VectorRelation(tableRef, Some(schema), sqlContext, Map.empty) {
-        override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] =
-          sqlContext.sparkContext.unloadVector(connectionProps, tableName, Seq(ColumnMetadata("s0", "varchar", false, 5, 0),
-            ColumnMetadata("s1", "varchar", false, 5, 0), ColumnMetadata("s2", "varchar", false, 5, 0)),
-            "*", "where s0 = ? or s2 = ?", Seq("def", "jkl"))
+        override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
+          Vector.unloadVector(sqlContext.sparkContext, tableName, connectionProps, Seq(ColumnMetadata("s0", "varchar", false, 5, 0),
+            ColumnMetadata("s1", "varchar", false, 5, 0), ColumnMetadata("s2", "varchar", false, 5, 0)), 
+            "*", "where s0 = ? or s2 = ?", Seq("def", "jkl")).asInstanceOf[RDD[Row]]
+        }
       }
       val dataframe = sqlContext.baseRelationToDataFrame(vectorRel)
       val resultsSpark = dataframe.collect.map(_.toSeq).toSeq
@@ -314,9 +316,10 @@ class VectorOpsTest extends fixture.FunSuite with SparkContextFixture with Match
       val sqlContext = new SQLContext(fixture.sc)
       val tableRef = TableRef(connectionProps, tableName)
       val vectorRel = new VectorRelation(tableRef, Some(schemafiltered), sqlContext, Map.empty) {
-        override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = 
-          sqlContext.sparkContext.unloadVector(connectionProps, tableName, Seq(ColumnMetadata("i0", "integer4", false, 10, 0),
-            ColumnMetadata("i2", "integer4", false, 10, 0)), "i0, i2", "where i0 > ? and i1 > ?", Seq(43, 44)) 
+        override def buildScan(requiredColumns: Array[String], filters: Array[Filter]): RDD[Row] = {
+          Vector.unloadVector(sqlContext.sparkContext, tableName, connectionProps, Seq(ColumnMetadata("i0", "integer4", false, 10, 0),
+            ColumnMetadata("i2", "integer4", false, 10, 0)), "i0, i2", "where i0 > ? and i1 > ?", Seq(43, 44)).asInstanceOf[RDD[Row]]
+        }
       }
       val dataframe = sqlContext.baseRelationToDataFrame(vectorRel)
       val resultsSpark = dataframe.collect.map(_.toSeq).toSeq
