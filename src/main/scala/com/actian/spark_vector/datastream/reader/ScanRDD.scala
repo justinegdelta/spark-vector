@@ -32,26 +32,31 @@ class ScanRDD(@transient private val sc: SparkContext, readConf: VectorEndpointC
   /** Closed state for the datastream connection */
   @volatile private var closed = false
   /** Custom row iterator for reading `DataStream`s in row format */
-  @volatile private var it: RowReader = _
+  @volatile private var it: RowReader = _ 
 
   override protected def getPartitions = (0 until readConf.vectorEndpoints.size).map(idx => new Partition { def index = idx }).toArray
 
   override protected def getPreferredLocations(split: Partition) = Seq(readConf.vectorEndpoints(split.index).host)
 
   override def compute(split: Partition, taskContext: TaskContext): Iterator[InternalRow] = {
-    taskContext.addTaskCompletionListener { _ => closeAll }
-    /** @todo Once we move to Spark 1.6 we can also addTaskFailureListener with closeAll */
+    taskContext.addTaskCompletionListener { _ => closeAll() }
+    taskContext.addTaskFailureListener { (_, e) => closeAll(Option(e)) }
+    
     closed = false
     it = read(split.index)
     it
   }
 
-  private def closeAll(): Unit = if (!closed) {
+  private def closeAll(failure: Option[Throwable] = None): Unit = if (!closed) {
+    failure.foreach(logError("Failure during task completion, closing RowReader", _))
     close(it, "RowReader")
     closed = true
+  } else {
+    failure.foreach(logError("Failure during task completion", _))
   }
 
   private def close[T <: { def close() }](c: T, resourceName: String): Unit = if (!closed && c != null) {
     try { c.close } catch { case e: Exception => logWarning(s"Exception closing $resourceName", e) }
   }
+
 }
