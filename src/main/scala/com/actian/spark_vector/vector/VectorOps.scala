@@ -15,9 +15,13 @@
  */
 package com.actian.spark_vector.vector
 
+import java.util.Properties
+
+import scala.collection.JavaConverters._
+
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{ DataFrameReader, DataFrameWriter, Row }
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
@@ -119,6 +123,98 @@ trait VectorOps {
     private def externalizeRDD(rdd: RDD[InternalRow], schema: StructType): RDD[Row] = {
       val encoder = RowEncoder(schema).resolveAndBind()
       rdd.map(encoder.fromRow(_))
+    }
+  }
+  
+  /**
+   * Wrapper class to expose Vector operations on DataFrameReader
+   * 
+   * @param reader dataFrameReader used for read
+   */
+  implicit class VectorDataFrameReader(reader: DataFrameReader) {
+    /**
+     * Construct a `DataFrame` representing the vector database table accessible via the x100 engine.
+     * 
+     * @param host Name of the vector host
+     * @param instance Name of the vector instance 
+     * @param database Name of the vector database
+     * @param table Name of the table to load
+     * @param properties Vector database connection arguments, a list of arbitrary string 
+     *                   tag/value. Normally at least a "user" and "password" property 
+     *                   should be included. Can also include a "cols" property consisting 
+     *                   of a comma separated list of the columns to write.
+     */
+    def vector(host: String, instance: String, database: String, table: String, properties: Properties) = {
+      var options: Map[String, String] = properties.asScala.toMap
+      options += ("host" -> host, "instance" -> instance, "database" -> database, "table" -> table)
+      reader.format("vector").options(options).load()
+    }
+    
+    /**
+     * Construct a `DataFrame` representing the vector database table accessible via the x100 engine.
+     * 
+     * @param vectorProps connection properties to the Vector instance
+     * @param table name of the table to load
+     * @param properties Vector database connection arguments, a list of arbitrary string 
+     *                   tag/value. Can include a "cols" property consisting 
+     *                   of a comma separated list of the columns to write.
+     */
+    def vector(vectorProps: VectorConnectionProperties, table: String, properties: Properties) = {
+      var options: Map[String, String] = properties.asScala.toMap
+      options += ("host" -> vectorProps.host, "instance" -> vectorProps.instance, 
+                  "database" -> vectorProps.database, "table" -> table)
+      if (vectorProps.user.isDefined) options += ("user" -> vectorProps.user.get)
+      if (vectorProps.user.isDefined) options += ("password" -> vectorProps.password.get)
+      reader.format("vector").options(options).load()
+    }
+  }
+  
+  /**
+   * Wrapper class to expose Vector Operations on DataFrameWriter
+   * 
+   * @param writer dataFrameWriter used for write
+   */
+  implicit class VectorDataFrameWriter(writer: DataFrameWriter[Row]) {
+    /**
+     * Saves the content of the `DataFrame` to an external vector database table accessible via the x100 engine.
+     * 
+     * @param host Name of the vector host
+     * @param instance Name of the vector instance 
+     * @param database Name of the vector database
+     * @param table Name of the table to unload
+     * @param properties Vector database connection arguments, a list of arbitrary string 
+     *                   tag/value. Normally at least a "user" and "password" property 
+     *                   should be included. Can include a "cols" property consisting 
+     *                   of a comma separated list of the columns to read. May also 
+     *                   include "loadpresql" and "loadpostsql" properties containing 
+     *                   any sql commands which should be run before or after the 
+     *                   DataFrame is written to the table.
+     */
+    def vector(host: String, instance: String, database: String, table: String, properties: Properties) = {
+      var options: Map[String, String] = properties.asScala.toMap
+      options += ("host" -> host, "instance" -> instance, "database" -> database, "table" -> table)
+      writer.format("vector").options(options).save()
+    }
+    
+    /**
+     * Saves the content of the `DataFrame` to an external vector database table accessible via the x100 engine.
+     * 
+     * @param vectorProps connection properties to the Vector instance
+     * @param table name of the table to unload
+     * @param properties Vector database connection arguments, a list of arbitrary string 
+     *                   tag/value. Can include a "cols" property consisting 
+     *                   of a comma separated list of the columns to read. May also 
+     *                   include "loadpresql" and "loadpostsql" properties containing 
+     *                   any sql commands which should be run before or after the 
+     *                   DataFrame is written to the table.
+     */
+    def vector(vectorProps: VectorConnectionProperties, table: String, properties: Properties) = {
+      var options: Map[String, String] = properties.asScala.toMap
+      options += ("host" -> vectorProps.host, "instance" -> vectorProps.instance, 
+                  "database" -> vectorProps.database, "table" -> table)
+      if (vectorProps.user.isDefined) options += ("user" -> vectorProps.user.get)
+      if (vectorProps.user.isDefined) options += ("password" -> vectorProps.password.get)
+      writer.format("vector").options(options).save()
     }
   }
 }
